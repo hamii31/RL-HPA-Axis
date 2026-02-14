@@ -338,12 +338,6 @@ If you use this simulator in your research, please cite:
 
 ---
 
-## License
-
-[Specify your license here - e.g., MIT, Apache 2.0, GPL-3.0]
-
----
-
 ## Acknowledgments
 
 This work builds upon established neuroendocrinology research and allostatic load theory. Physiological parameters are derived from peer-reviewed literature (see References). The curriculum learning approach is inspired by developmental neuroscience and transfer learning in machine learning.
@@ -352,7 +346,7 @@ This work builds upon established neuroendocrinology research and allostatic loa
 
 ## Contact
 
-(Author)[https://github.com/hamii31]
+[Author](https://github.com/hamii31)
 
 ---
 
