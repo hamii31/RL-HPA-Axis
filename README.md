@@ -1,338 +1,362 @@
 # HPA Axis Simulator using Reinforcement Learning with Curriculum Training
-========================================================================
 
-Models the Hypothalamic-Pituitary-Adrenal axis as an RL agent that learns
-to maintain hormonal homeostasis while responding to stress through
-developmental stages (child → adolescent → adult).
+Models the Hypothalamic-Pituitary-Adrenal axis as an RL agent that learns to maintain hormonal homeostasis while responding to stress through developmental stages (child → adolescent → adult).
 
-The agent learns to regulate CRH, ACTH, and cortisol levels through experience,
-minimizing allostatic load (cumulative biological damage) rather than maximizing
-arbitrary reward points.
+The agent learns to regulate CRH, ACTH, and cortisol levels through experience, minimizing allostatic load (cumulative biological damage) rather than maximizing arbitrary reward points.
 
-Key Features:
-1. Literature-based physiological parameters (half-lives, secretion rates)
-2. Ultradian pulses (90-minute oscillations superimposed on circadian rhythm)
-3. Gland mass dynamics (weeks-long adaptation to chronic stress)
-4. Dual receptor system (MR and GR with different affinities)
-5. Extended time scale for chronic stress simulation (10 days per adult episode)
-6. Curriculum learning through developmental stages
-7. Biological cost function (allostatic load) instead of arbitrary rewards
+---
 
-================================================================================
-REWARD FRAMEWORK: ALLOSTATIC LOAD (BIOLOGICAL COST)
-================================================================================
+## Key Features
 
-The agent learns by MINIMIZING allostatic load (cumulative wear and tear):
+1. **Literature-based physiological parameters** (half-lives, secretion rates)
+2. **Ultradian pulses** (90-minute oscillations superimposed on circadian rhythm)
+3. **Gland mass dynamics** (weeks-long adaptation to chronic stress)
+4. **Dual receptor system** (MR and GR with different affinities)
+5. **Extended time scale** for chronic stress simulation (10 days per adult episode)
+6. **Curriculum learning** through developmental stages
+7. **Biological cost function** (allostatic load) instead of arbitrary rewards
 
-    reward = -allostatic_load + 5.0
+---
 
-Where allostatic_load is the sum of biological costs per time step.
+## Reward Framework: Allostatic Load (Biological Cost)
 
-This means:
+The agent learns by **MINIMIZING allostatic load** (cumulative wear and tear):
+
+```python
+reward = -allostatic_load + 5.0
+```
+
+Where `allostatic_load` is the sum of biological costs per time step.
+
+**This means:**
 - Maximizing reward ≡ Minimizing biological damage
 - Positive scores = Healthier than baseline
 - Negative scores = Accumulated damage exceeding baseline
 - Scores map directly to clinical health states
 
---------------------------------------------------------------------------------
-Allostatic Load Components (per time step):
---------------------------------------------------------------------------------
+### Allostatic Load Components (per time step)
 
-1. BASAL METABOLIC COST (~0.05/step)
+1. **BASAL METABOLIC COST** (~0.05/step)
    - Minimum energy to maintain HPA axis
-   - Always present (like cellular respiration)
 
-2. CORTISOL DEVIATION COST (Quadratic)
-   - Optimal: 15 μg/dL (cost ≈ 0.01)
-   - Tolerance: ±7 μg/dL (minimal cost in this range)
-   - Outside tolerance: cost = 0.5 * ((deviation - 7) / 7)²
-   
-   Examples:
-   • Cortisol = 15 μg/dL (optimal):  cost ≈ 0.01
-   • Cortisol = 20 μg/dL (+5):       cost ≈ 0.05
-   • Cortisol = 25 μg/dL (+10):      cost ≈ 0.5
-   • Cortisol = 35 μg/dL (+20):      cost ≈ 3.5
+2. **CORTISOL DEVIATION COST** (Quadratic)
+   - Optimal: 15 μg/dL, Tolerance: ±7 μg/dL
+   - Formula: `0.5 × ((deviation - 7) / 7)²`
 
-3. TISSUE-SPECIFIC DAMAGE (Dose-dependent)
-   
-   Hypercortisolism (>25 μg/dL):
-   • Metabolic damage: (excess) * 0.3
-     - Hyperglycemia: 0.1 per μg/dL
-     - Muscle wasting: 0.05 per μg/dL
-     - Bone loss: 0.05 per μg/dL
-     - Immune suppression: 0.1 per μg/dL
-   • Crisis risk (>35 μg/dL): +2-5 exponential term
-   
-   Hypocortisolism (<5 μg/dL):
-   • Crisis damage: (deficit) * 0.7
-     - Hypotension: 0.2 per μg/dL
-     - Hypoglycemia: 0.3 per μg/dL
-     - Inflammation: 0.2 per μg/dL
-   • Addisonian crisis (<2 μg/dL): +5 exponential term
+3. **TISSUE-SPECIFIC DAMAGE** (Dose-dependent)
+   - **Hypercortisolism** (>25 μg/dL): `excess × 0.3`
+     - Hyperglycemia, muscle wasting, bone loss, immune suppression
+   - **Hypocortisolism** (<5 μg/dL): `deficit × 0.7`
+     - Hypotension, hypoglycemia, inflammation
 
-4. ACTH DYSREGULATION (~0.02 * deviation²)
-   - Optimal: 25 pg/mL, Tolerance: ±15 pg/mL
+4. **ACTH DYSREGULATION** (~0.02 × deviation²)
+5. **CRH DYSREGULATION** (~0.01 × deviation²)
+6. **RECEPTOR DYSFUNCTION** (MR/GR occupancy costs)
+7. **GLAND PATHOLOGY** (hypertrophy/atrophy)
+8. **INSTABILITY COST** (variance-based)
+9. **STRESS RESPONSE APPROPRIATENESS**
 
-5. CRH DYSREGULATION (~0.01 * deviation²)
-   - Optimal: 100 pg/mL, Tolerance: ±50 pg/mL
+#### Total Load Ranges
 
-6. RECEPTOR DYSFUNCTION
-   - MR occupancy cost: 0.5 * (occupancy - 0.8)²
-   - GR occupancy cost: 0.3 * (occupancy - target)²
-     (target = 0.3 at baseline, 0.7 during stress)
-   - Receptor downregulation: 0.5 * (1 - receptor_density)²
+| Load/Step | Health State |
+|-----------|-------------|
+| 0.1 - 0.3 | Excellent regulation |
+| 0.3 - 1.0 | Good regulation |
+| 1.0 - 2.0 | Acceptable |
+| 2.0 - 4.0 | Mild dysfunction |
+| 4.0 - 7.0 | Moderate dysfunction |
+| 7.0 - 15.0 | Severe dysregulation |
+| >15.0 | Crisis state |
 
-7. GLAND PATHOLOGY
-   - Adrenal hypertrophy/atrophy: 0.3 * (mass - 1.0)²
-   - Pituitary changes: 0.3 * (mass - 1.0)²
-   - Severe pathology (>50% change): 3 * multiplier
+---
 
-8. INSTABILITY COST
-   - Low variance (<25): cost ≈ 0.0
-   - High variance (>50): cost ≈ (variance - 25) / 100
-
-9. STRESS RESPONSE APPROPRIATENESS
-   - During stress: cortisol should match (20 + stress_level * 2)
-   - Response error: 0.5 * (error / 10)²
-
---------------------------------------------------------------------------------
-Total Allostatic Load per Step:
---------------------------------------------------------------------------------
-
-Typical ranges:
-• Excellent regulation:     0.1 - 0.3 load/step
-• Good regulation:          0.3 - 1.0 load/step
-• Acceptable:               1.0 - 2.0 load/step
-• Mild dysfunction:         2.0 - 4.0 load/step
-• Moderate dysfunction:     4.0 - 7.0 load/step
-• Severe dysregulation:     7.0 - 15.0 load/step
-• Crisis state:             >15.0 load/step
-
-================================================================================
-CURRICULUM TRAINING STAGES
-================================================================================
+## Curriculum Training Stages
 
 The agent learns through three developmental stages, mimicking HPA maturation:
 
---------------------------------------------------------------------------------
-STAGE 1: CHILD (Learning Basics)
---------------------------------------------------------------------------------
-Episode length:     24 hours (240 steps at 0.1 hr/step)
-Time step:          6 minutes
-Feedback maturity:  40% (weak negative feedback)
-Receptor sensitivity: 60%
-Stress resilience:  50% (high vulnerability)
-Training episodes:  100
+### Stage 1: CHILD (Learning Basics)
+- **Episode length:** 24 hours (240 steps)
+- **Feedback maturity:** 40% (weak negative feedback)
+- **Receptor sensitivity:** 60%
+- **Training episodes:** 100
+- **Expected scores:** +50 to +150
 
-Purpose: Learn fundamental hormone regulation without complexity
-Expected scores: +50 to +150 per episode
+### Stage 2: ADOLESCENT (Intermediate)
+- **Episode length:** 72 hours (720 steps) = 3 days
+- **Feedback maturity:** 90% (near-adult)
+- **Receptor sensitivity:** 95%
+- **Training episodes:** 150
+- **Expected scores:** +200 to +500
 
---------------------------------------------------------------------------------
-STAGE 2: ADOLESCENT (Intermediate Complexity)
---------------------------------------------------------------------------------
-Episode length:     72 hours (720 steps) = 3 days
-Time step:          6 minutes
-Feedback maturity:  90% (near-adult feedback)
-Receptor sensitivity: 95%
-Stress resilience:  85%
-Training episodes:  150
+### Stage 3: ADULT (Full Complexity)
+- **Episode length:** 240 hours (2400 steps) = 10 days
+- **Feedback maturity:** 100%
+- **Receptor sensitivity:** 100%
+- **Training episodes:** 200
+- **Expected scores:** +5000 to +12000
 
-Purpose: Handle longer episodes, stronger feedback, more stress events
-Expected scores: +200 to +500 per episode
+### Transfer Learning
+- Q-table persists across stages (knowledge accumulates)
+- Exploration rate (epsilon) partially resets between stages
+- Agent builds on previous learning
+- **Total training:** 450 episodes across all stages
 
---------------------------------------------------------------------------------
-STAGE 3: ADULT (Full Complexity)
---------------------------------------------------------------------------------
-Episode length:     240 hours (2400 steps) = 10 days
-Time step:          6 minutes
-Feedback maturity:  100% (full feedback strength)
-Receptor sensitivity: 100%
-Stress resilience:  100%
-Training episodes:  200
+---
 
-Purpose: Master full HPA complexity with chronic adaptation
-Expected scores: +5000 to +12000 per episode
+## Interpreting Scores
 
---------------------------------------------------------------------------------
-Transfer Learning:
---------------------------------------------------------------------------------
-• Q-table persists across stages (knowledge accumulates)
-• Exploration rate (epsilon) partially resets between stages
-• Agent builds on previous learning rather than starting from scratch
-• Total training: 450 episodes across all stages
-
-================================================================================
-INTERPRETING SCORES
-================================================================================
-
+```
 Scores = Cumulative Reward = Σ(5.0 - allostatic_load) over all steps
+```
 
---------------------------------------------------------------------------------
-Per-Step Interpretation:
---------------------------------------------------------------------------------
+### Per-Step Interpretation
 
-reward_per_step = 5.0 - load
+| Reward/Step | Load/Step | Health State |
+|-------------|-----------|--------------|
+| +4.8 | 0.2 | Excellent (minimal damage) |
+| +4.0 | 1.0 | Good (low allostatic load) |
+| +3.0 | 2.0 | Acceptable (manageable) |
+| +2.0 | 3.0 | Mild dysfunction |
+| +1.0 | 4.0 | Moderate dysfunction |
+| 0.0 | 5.0 | Baseline (break-even) |
+| -1.0 | 6.0 | Poor regulation |
+| -3.0 | 8.0 | Severe dysregulation |
+| -5.0 | 10.0 | Crisis-level damage |
 
-Reward/Step  |  Load/Step  |  Health State
--------------|-------------|----------------------------------------
-  +4.8       |    0.2      |  Excellent (minimal damage)
-  +4.0       |    1.0      |  Good (low allostatic load)
-  +3.0       |    2.0      |  Acceptable (manageable stress)
-  +2.0       |    3.0      |  Mild dysfunction
-  +1.0       |    4.0      |  Moderate dysfunction
-   0.0       |    5.0      |  Baseline (break-even point)
-  -1.0       |    6.0      |  Poor regulation
-  -3.0       |    8.0      |  Severe dysregulation
-  -5.0       |   10.0      |  Crisis-level damage
+### Adult Stage Score Ranges (2400 steps)
 
---------------------------------------------------------------------------------
-Episode Score Ranges by Stage:
---------------------------------------------------------------------------------
+| Score Range | Load/Step | Clinical State |
+|-------------|-----------|----------------|
+| +10000 to +12000 | ~0.2 | Optimal health |
+| +7000 to +10000 | ~0.5 | Strong regulation |
+| +4000 to +7000 | ~1.0 | Decent homeostasis |
+| +2000 to +4000 | ~1.5 | Manageable |
+| 0 to +2000 | ~2.5 | Frequent deviation |
+| -2000 to 0 | ~3.0 | Chronic mild dysfunction |
+| -5000 to -2000 | ~4.0 | Significant dysregulation |
+| < -5000 | >5.0 | Pathological state |
 
-CHILD STAGE (240 steps):
-  +200 to +250:    Excellent regulation
-  +100 to +200:    Good control
-  +50 to +100:     Acceptable, learning
-  0 to +50:        Struggling
-  < 0:             Poor regulation
+### Clinical Mapping Examples
 
-ADOLESCENT STAGE (720 steps):
-  +700 to +900:    Excellent regulation
-  +400 to +700:    Good control
-  +200 to +400:    Acceptable
-  0 to +200:       Struggling
-  < 0:             Poor regulation
+**Score: +10000** (load ~0.2/step)
+- Healthy individual with robust HPA axis
+- Appropriate stress responses, quick recovery
+- Minimal tissue damage accumulation
 
-ADULT STAGE (2400 steps):
-  +10000 to +12000:  Excellent (load ~0.2/step) - Optimal health
-  +7000 to +10000:   Very good (load ~0.5/step) - Strong regulation
-  +4000 to +7000:    Good (load ~1.0/step) - Decent homeostasis
-  +2000 to +4000:    Acceptable (load ~1.5/step) - Manageable
-  0 to +2000:        Borderline (load ~2.5/step) - Frequent deviation
-  -2000 to 0:        Poor (load ~3.0/step) - Chronic mild dysfunction
-  -5000 to -2000:    Bad (load ~4.0/step) - Significant dysregulation
-  < -5000:           Severe (load >5.0/step) - Pathological state
+**Score: 0** (load ~5.0/step)
+- Baseline health threshold
+- Break-even point between health and disease
 
---------------------------------------------------------------------------------
-Clinical Mapping of Adult Scores:
---------------------------------------------------------------------------------
+**Score: -5000** (load ~7.0/step)
+- Clinical dysfunction
+- Similar to mild Cushing's or adrenal insufficiency
+- Requires medical intervention
 
-Score: +10000 (load ~0.2/step)
-→ Healthy individual with robust HPA axis
-→ Appropriate stress responses, quick recovery
-→ Minimal tissue damage accumulation
-→ Normal cortisol circadian rhythm maintained
+**Score: -10000** (load ~9.0/step)
+- Severe pathological state
+- Major endocrine disorder
+- Emergency medical treatment needed
 
-Score: +5000 (load ~1.0/step)
-→ Generally healthy with occasional dysregulation
-→ May have mild metabolic changes under chronic stress
-→ Slightly elevated disease risk long-term
+---
 
-Score: 0 (load ~5.0/step)
-→ Baseline health threshold
-→ Break-even point between health and disease
-→ Accumulated damage equals baseline
+## What Negative Scores Mean
 
-Score: -2500 (load ~6.0/step)
-→ Subclinical dysfunction
-→ Equivalent to chronic mild hypercortisolism
-→ Metabolic syndrome risk, mild immune suppression
-→ Weight gain, mood changes likely
+Negative scores indicate cumulative damage exceeding baseline threshold.
 
-Score: -5000 (load ~7.0/step)
-→ Clinical dysfunction
-→ Overt symptoms of dysregulation
-→ Similar to mild Cushing's or adrenal insufficiency
-→ Requires medical intervention
+**Example:** Score = -2400 over 10 days
+- Reward per step: -1.0/step
+- Load per step: 6.0/step
+- Total load: 14,400 units
 
-Score: -10000 (load ~9.0/step)
-→ Severe pathological state
-→ Major endocrine disorder equivalent
-→ High crisis risk, organ damage
-→ Emergency medical treatment needed
+**Clinical interpretation:**
+- Chronic moderate dysregulation
+- Equivalent to subclinical Cushing's for 10 days
+- Symptoms: Hyperglycemia, hypertension, immune suppression, mood disturbances
 
-================================================================================
-WHAT NEGATIVE SCORES MEAN
-================================================================================
-
-Negative scores indicate cumulative damage exceeding the baseline threshold.
-This is REALISTIC and INTERPRETABLE:
-
-Example: Score = -2400 over 10 days (adult stage)
-  • Reward per step: -2400 / 2400 = -1.0/step
-  • Load per step: 5.0 - (-1.0) = 6.0/step
-  • Total load accumulated: 6.0 * 2400 = 14,400 units
-  
-Clinical interpretation:
-  • Chronic moderate dysregulation
-  • Sustained hypercortisolism or hypocortisolism
-  • Equivalent to subclinical Cushing's for 10 days
-  • Would manifest as:
-    - Hyperglycemia, hypertension
-    - Immune suppression
-    - Mood disturbances
-    - Weight changes
-    - Increased disease risk
-
-This is what happens with an UNTRAINED agent (random actions)!
+**Note:** This is typical for an **untrained agent** (random actions).  
 A well-trained agent achieves positive scores (+8000 to +11000).
 
-================================================================================
-TYPICAL TRAINING PROGRESSION
-================================================================================
+---
 
-Child Stage (Episodes 1-100):
-  Early (1-30):      -50 to +50    (exploring, learning basics)
-  Mid (31-70):       +50 to +100   (improving control)
-  Late (71-100):     +100 to +150  (decent regulation)
+## Typical Training Progression
 
-Adolescent Stage (Episodes 101-250):
-  Early (101-150):   +100 to +300  (adapting to longer episodes)
-  Mid (151-200):     +300 to +400  (building on child knowledge)
-  Late (201-250):    +350 to +500  (mastering 3-day episodes)
+### Child Stage (Episodes 1-100)
+- Early (1-30): -50 to +50 (exploring)
+- Mid (31-70): +50 to +100 (improving)
+- Late (71-100): +100 to +150 (decent regulation)
 
-Adult Stage (Episodes 251-450):
-  Early (251-300):   +1000 to +4000   (transfer learning, exploring)
-  Mid (301-400):     +4000 to +8000   (refining policy)
-  Late (401-450):    +8000 to +11000  (near-optimal regulation)
+### Adolescent Stage (Episodes 101-250)
+- Early (101-150): +100 to +300 (adapting)
+- Mid (151-200): +300 to +400 (building knowledge)
+- Late (201-250): +350 to +500 (mastering 3-day episodes)
 
-Final test performance (adult stage, greedy policy):
-  Expected: +9000 to +10500 with low variance (±200)
+### Adult Stage (Episodes 251-450)
+- Early (251-300): +1000 to +4000 (transfer learning)
+- Mid (301-400): +4000 to +8000 (refining policy)
+- Late (401-450): +8000 to +11000 (near-optimal)
 
-================================================================================
-SUMMARY
-================================================================================
+**Final test performance:**  
+Expected adult test scores: +9000 to +10500 (±200)
 
-This HPA axis simulator uses:
+---
 
-1. BIOLOGICAL COST FUNCTION
-   - Allostatic load = cumulative wear and tear
-   - Reward = minimize damage
-   - Scores map to health states
+## Installation & Usage
 
-2. CURRICULUM TRAINING
-   - Child -> Adolescent -> Adult stages
-   - Progressive difficulty
-   - Transfer learning between stages
+```bash
+# Install dependencies
+pip install numpy matplotlib --break-system-packages
 
-3. EXTENDED TIME SCALES
-   - 24 hours (child) → 72 hours (adolescent) → 240 hours (adult)
-   - Allows observation of chronic adaptation
-   - Gland mass changes over weeks
+# Run
+python hpa.py
+```
 
-4. PHYSIOLOGICALLY ACCURATE
-   - Literature-based parameters
-   - Ultradian + circadian rhythms
-   - MR/GR dual receptor system
-   - Dose-dependent tissue damage
+---
 
-5. INTERPRETABLE OUTPUTS
-   - Positive scores = healthy regulation
-   - Negative scores = accumulated damage
-   - Direct clinical mapping
-   - Research-grade quality
+## Technical Details
 
-Expected final performance:
-  • Adult test scores: +9000 to +10500
-  • Allostatic load: ~0.2-0.4 per step
-  • Clinical state: Excellent health, robust HPA axis
+### Physiological Parameters (Literature-Based)
+
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Cortisol half-life | 75 min | [1, 2] |
+| ACTH half-life | 10 min | [1, 2] |
+| CRH half-life | 15 min | [1, 2] |
+| Cortisol daily secretion | 20-30 mg/day | [3] |
+| Cortisol serum levels | 5-24 μg/dL | [3] |
+| Circadian peak | 07:00-08:00 AM | [4, 5] |
+| Circadian nadir | 02:00-04:00 AM | [4, 5] |
+| Ultradian period | 60-90 min | [6] |
+| MR Kd (affinity) | 0.5 nM | [7, 8] |
+| GR Kd (affinity) | 5.0 nM | [7, 8] |
+
+### Reinforcement Learning
+
+- **Algorithm:** Deep Q-Network (DQN) with Q-learning
+- **State space:** 12 features (hormones, receptors, glands, time, stress)
+- **Action space:** 9 discrete actions (3×3 hormone modulation combinations)
+- **Exploration:** ε-greedy with decay (1.0 → 0.01)
+- **Learning rate:** 0.0005
+- **Discount factor (γ):** 0.98
+- **Batch size:** 128
+- **Memory:** 10,000 experience replay buffer
+
+---
+
+## Scientific References
+
+### HPA Axis Physiology & Regulation
+
+1. **Smith, S.M., & Vale, W.W. (2006).** The role of the hypothalamic-pituitary-adrenal axis in neuroendocrine responses to stress. *Dialogues in Clinical Neuroscience*, 8(4), 383-395.  
+   [PMC1828259](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1828259/)
+
+2. **Herman, J.P., McKlveen, J.M., Ghosal, S., Kopp, B., Wulsin, A., Makinson, R., Scheimann, J., & Myers, B. (2016).** Regulation of the hypothalamic-pituitary-adrenocortical stress response. *Comprehensive Physiology*, 6(2), 603-621.  
+   [PMC4867107](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4867107/)
+
+3. **Nicolaides, N.C., Kyratzi, E., Lamprokostopoulou, A., Chrousos, G.P., & Charmandari, E. (2015).** Stress, the stress system and the role of glucocorticoids. *Neuroimmunomodulation*, 22(1-2), 6-19.  
+   [Abstract](https://pubmed.ncbi.nlm.nih.gov/25227402/)
+
+### Circadian & Ultradian Rhythms
+
+4. **Kritikou, I., Basta, M., Vgontzas, A.N., Pejovic, S., Liao, D., Tsaoussoglou, M., Bixler, E.O., Stefanakis, Z., & Chrousos, G.P. (2016).** Sleep apnoea and the hypothalamic-pituitary-adrenal axis in men and women: effects of continuous positive airway pressure. *European Respiratory Journal*, 47(2), 531-540.  
+   [PMC7830980](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7830980/)
+
+5. **Debono, M., Ghobadi, C., Rostami-Hodjegan, A., Huatan, H., Campbell, M.J., Newell-Price, J., Darzy, K., Merke, D.P., Arlt, W., & Ross, R.J. (2009).** Modified-release hydrocortisone to provide circadian cortisol profiles. *Journal of Clinical Endocrinology & Metabolism*, 94(5), 1548-1554.  
+   [PMC3475279](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3475279/)
+
+6. **Chung, S., Son, G.H., & Kim, K. (2011).** Circadian rhythm of adrenal glucocorticoid: Its regulation and clinical implications. *Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease*, 1812(5), 581-591.  
+   [PMC8813037](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8813037/)
+
+7. **Lightman, S.L., Wiles, C.C., Atkinson, H.C., Henley, D.E., Russell, G.M., Leendertz, J.A., McKenna, M.A., Spiga, F., Wood, S.A., & Conway-Campbell, B.L. (2008).** The significance of glucocorticoid pulsatility. *European Journal of Pharmacology*, 583(2-3), 255-262.  
+   [Abstract](https://pubmed.ncbi.nlm.nih.gov/18339373/)
+
+### Glucocorticoid Receptors & Feedback
+
+8. **de Kloet, E.R., Joëls, M., & Holsboer, F. (2005).** Stress and the brain: from adaptation to disease. *Nature Reviews Neuroscience*, 6(6), 463-475.  
+   [Abstract](https://pubmed.ncbi.nlm.nih.gov/15891777/)
+
+9. **Groeneweg, F.L., Karst, H., de Kloet, E.R., & Joëls, M. (2012).** Mineralocorticoid and glucocorticoid receptors at the neuronal membrane, regulators of nongenomic corticosteroid signalling. *Molecular and Cellular Endocrinology*, 350(2), 299-309.  
+   [Abstract](https://pubmed.ncbi.nlm.nih.gov/21736918/)
+
+10. **Spiga, F., Walker, J.J., Gupta, R., Terry, J.R., & Lightman, S.L. (2015).** Role of glucocorticoid negative feedback in the regulation of HPA axis pulsatility. *Stress*, 18(4), 403-416.  
+    [PMC6220752](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6220752/)
+
+### Mathematical Modeling of HPA Axis
+
+11. **Rao, R., DuBois, D., Almon, R., Jusko, W.J., & Androulakis, I.P. (2016).** Mathematical modeling of the circadian dynamics of the neuroendocrine-immune network in experimentally induced arthritis. *American Journal of Physiology-Endocrinology and Metabolism*, 311(2), E310-E324.  
+    [Abstract](https://pubmed.ncbi.nlm.nih.gov/27245335/)
+
+12. **Bangsgaard, E.O., Ottesen, J.T., Sturis, J., & Pedersen, M.G. (2020).** A new model for the HPA axis explains dysregulation of stress hormones on the timescale of weeks. *PLoS Computational Biology*, 16(7), e1007572.  
+    [PMC7364861](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7364861/)
+
+### Allostatic Load Theory
+
+13. **McEwen, B.S. (1998).** Stress, adaptation, and disease: Allostasis and allostatic load. *Annals of the New York Academy of Sciences*, 840(1), 33-44.  
+    [Abstract](https://pubmed.ncbi.nlm.nih.gov/9629234/)
+
+14. **McEwen, B.S., & Stellar, E. (1993).** Stress and the individual: Mechanisms leading to disease. *Archives of Internal Medicine*, 153(18), 2093-2101.  
+    [Abstract](https://pubmed.ncbi.nlm.nih.gov/8379800/)
+
+15. **Juster, R.P., McEwen, B.S., & Lupien, S.J. (2010).** Allostatic load biomarkers of chronic stress and impact on health and cognition. *Neuroscience & Biobehavioral Reviews*, 35(2), 2-16.  
+    [Abstract](https://pubmed.ncbi.nlm.nih.gov/19822172/)
+
+---
+
+## Applications
+
+### Research
+- Understanding chronic stress pathophysiology
+- Modeling endocrine disorders (Cushing's, Addison's, PTSD)
+- Testing therapeutic interventions *in silico*
+- Drug development and screening
+
+### Clinical
+- Personalized medicine (fit model to patient data)
+- Treatment response prediction
+- Disease progression modeling
+- Medical education and training
+
+### Computational
+- Benchmark for physiologically-informed RL
+- Transfer learning in biological systems
+- Curriculum learning case study
+
+---
+
+## Citation
+
+If you use this simulator in your research, please cite:
+
+```bibtex
+@software{hpa_axis_rl_simulator,
+  title = {HPA Axis Simulator using Reinforcement Learning with Curriculum Training},
+  author = {[Hami Ibriyamov]},
+  year = {2026},
+  url = {[https://github.com/hamii31/RL-HPA-Axis]},
+  note = {Clinically-accurate HPA axis model with allostatic load framework}
+}
+```
+
+---
+
+## License
+
+[Specify your license here - e.g., MIT, Apache 2.0, GPL-3.0]
+
+---
+
+## Acknowledgments
+
+This work builds upon established neuroendocrinology research and allostatic load theory. Physiological parameters are derived from peer-reviewed literature (see References). The curriculum learning approach is inspired by developmental neuroscience and transfer learning in machine learning.
+
+---
+
+## Contact
+
+(Author)[https://github.com/hamii31]
+
+---
+
+**Expected Final Performance:**
+- Adult test scores: +9000 to +10500
+- Allostatic load: ~0.2-0.4 per step
+- Clinical state: Excellent health, robust HPA axis regulation
