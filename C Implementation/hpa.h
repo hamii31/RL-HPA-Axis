@@ -119,6 +119,9 @@ extern "C" {
     /* Cleanup */
     void HPA_destroy(HPA* self);
 
+	/* Random number init */
+    void HPA_initialize_random();
+
 #ifdef __cplusplus
 }
 #endif
