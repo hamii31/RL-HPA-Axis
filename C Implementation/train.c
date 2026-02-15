@@ -189,7 +189,7 @@ void test_stage(Agent* agent, const char* stage_name, DevelopmentalStage stage, 
     variance /= n_tests;
     double stddev = sqrt(variance);
     
-    printf("\n  Test Average: %.1f ± %.1f\n", avg, stddev);
+    printf("\n  Test Average: %.1f (+- %.1f)\n", avg, stddev);
     printf("========================================================================\n");
     
     free(test_scores);
@@ -203,9 +203,9 @@ int main() {
     printf("HPA Axis Curriculum training\n");
     printf("========================================================================\n");
     printf("\nTraining progression:\n");
-    printf("  Stage 1: Child       -  24 hours/episode  (simple)\n");
-    printf("  Stage 2: Adolescent  -  72 hours/episode  (intermediate)\n");
-    printf("  Stage 3: Adult       -  240 hours/episode (full complexity)\n");
+	printf("  Stage 1: Child       -  96 hours/episode  (4 days)\n"); // Early-life stress adaptations have lasting effects, so we keep episodes shorter to focus on learning basic regulation without overwhelming the agent
+	printf("  Stage 2: Adolescent  -  168 hours/episode  (1 week)\n"); // Adolescence is a critical period for HPA axis maturation, so we increase episode length to allow the agent to learn more complex dynamics and longer-term regulation strategies
+	printf("  Stage 3: Adult       -  336 hours/episode (2 weeks)\n"); // Adult stage represents the full complexity of the HPA axis, so we further increase episode length to allow the agent to master long-term regulation and adapt to a wider range of stressors
     printf("\nQ-table transfers between stages (transfer learning)\n");
     printf("========================================================================\n");
     
@@ -225,11 +225,10 @@ int main() {
     printf("  Initial epsilon: %.2f\n", agent->epsilon);
     
     /* Define curriculum stages */
-    /* Since C allows for faster computation, we can increase the episodes per stage */
     StageConfig stages[3] = {
-        {"CHILD",      STAGE_CHILD,      200, 0.3},  /* 200 episodes, boost ε to 0.3 */
-        {"ADOLESCENT", STAGE_ADOLESCENT, 300, 0.2},  /* 300 episodes, boost ε to 0.2 */
-        {"ADULT",      STAGE_ADULT,      500, -1.0}  /* 500 episodes, no boost */
+        {"CHILD",      STAGE_CHILD,      100, 0.3},  /* 100 episodes, boost epsilon to 0.3 to learn more aggressively */
+        {"ADOLESCENT", STAGE_ADOLESCENT, 150, 0.2},  /* 150 episodes, boost epsilon to 0.2 */
+        {"ADULT",      STAGE_ADULT,      200, -1.0}  /* 200 episodes, no epsilon boost */
     };
     
     // ========================================================
