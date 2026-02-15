@@ -13,7 +13,7 @@ extern "C" {
 
 #define QTABLE_INITIAL_CAPACITY 10000   /* Initial hash table capacity */
 #define QTABLE_LOAD_FACTOR 0.75         /* Rehash when 75% full */
-#define REPLAY_BUFFER_SIZE 10000        /* Experience replay capacity */
+#define REPLAY_BUFFER_SIZE 20000        /* Experience replay capacity */
 #define BATCH_SIZE 128                  /* Mini-batch size for training */
 
 /* Discretized state key (for Q-table lookup) */
