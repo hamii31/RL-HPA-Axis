@@ -203,9 +203,9 @@ int main() {
     printf("HPA Axis Curriculum training\n");
     printf("========================================================================\n");
     printf("\nTraining progression:\n");
-    printf("  Stage 1: Child       →  24 hours/episode  (simple)\n");
-    printf("  Stage 2: Adolescent  →  72 hours/episode  (intermediate)\n");
-    printf("  Stage 3: Adult       →  240 hours/episode (full complexity)\n");
+    printf("  Stage 1: Child       -  24 hours/episode  (simple)\n");
+    printf("  Stage 2: Adolescent  -  72 hours/episode  (intermediate)\n");
+    printf("  Stage 3: Adult       -  240 hours/episode (full complexity)\n");
     printf("\nQ-table transfers between stages (transfer learning)\n");
     printf("========================================================================\n");
     
@@ -221,8 +221,8 @@ int main() {
         return 1;
     }
     printf("  Learning rate: %.4f\n", agent->learning_rate);
-    printf("  Discount (γ): %.2f\n", agent->gamma);
-    printf("  Initial ε: %.2f\n", agent->epsilon);
+    printf("  Discount (gamma): %.2f\n", agent->gamma);
+    printf("  Initial epsilon: %.2f\n", agent->epsilon);
     
     /* Define curriculum stages */
     /* Since C allows for faster computation, we can increase the episodes per stage */
