@@ -5,7 +5,7 @@ Models the Hypothalamic-Pituitary-Adrenal axis as an RL agent that learns to mai
 The agent learns to regulate CRH, ACTH, and cortisol levels through experience, minimizing allostatic load (cumulative biological damage) rather than maximizing arbitrary reward points.
 
 There are two implementations of this project - one in Python and one in C. The one in Python is a generally balanced implementation, mixing performance and simplicity. It comes with insightful visualizations, that
-I have not implemented in the C variation. The C implementation leans toward performance, allowing for larger amounts of episodes per stage.
+I have not implemented in the C variation. The C implementation leans toward performance, allowing for longer training periods that yield more accurate and realistic results.
 
 ---
 
