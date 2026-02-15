@@ -235,7 +235,7 @@ double HPA_calculate_allostatic_load(HPA* self, double mr_occ, double gr_occ) {
         load += (variance - 25.0) / 100.0;
     }
 
-    // 9. Stress response appropriateness
+    // Stress response appropriateness
     if (self->stress_level > 6.0) {
         double expected_cort = 20.0 + self->stress_level * 2.0;
         double response_error = fabs(self->cortisol - expected_cort);
@@ -293,21 +293,21 @@ void HPA_init(HPA* self, double time_step_hours, DevelopmentalStage stage) {
     // Set stage-specific parameters
     switch (stage) {
     case STAGE_CHILD:
-        self->max_steps = 240;  // 24 hours
+        self->max_steps = 960;  // 96 hours
         self->feedback_maturity = 0.4;
         self->receptor_sensitivity = 0.6;
         self->stress_resilience = 0.5;
         break;
 
     case STAGE_ADOLESCENT:
-        self->max_steps = 720;  // 72 hours
+        self->max_steps = 1680;  // 168 hours
         self->feedback_maturity = 0.9;
         self->receptor_sensitivity = 0.95;
         self->stress_resilience = 0.85;
         break;
 
     case STAGE_ADULT:
-        self->max_steps = 2400;  // 240 hours
+        self->max_steps = 3360;  // 336 hours
         self->feedback_maturity = 1.0;
         self->receptor_sensitivity = 1.0;
         self->stress_resilience = 1.0;
