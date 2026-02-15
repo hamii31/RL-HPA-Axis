@@ -293,21 +293,21 @@ void HPA_init(HPA* self, double time_step_hours, DevelopmentalStage stage) {
     // Set stage-specific parameters
     switch (stage) {
     case STAGE_CHILD:
-        self->max_steps = 960;  // 96 hours
+		self->max_steps = 1680;  // 168 hours (1 week)
         self->feedback_maturity = 0.4;
         self->receptor_sensitivity = 0.6;
         self->stress_resilience = 0.5;
         break;
 
     case STAGE_ADOLESCENT:
-        self->max_steps = 1680;  // 168 hours
+		self->max_steps = 3360;  // 336 hours (2 weeks)
         self->feedback_maturity = 0.9;
         self->receptor_sensitivity = 0.95;
         self->stress_resilience = 0.85;
         break;
 
     case STAGE_ADULT:
-        self->max_steps = 3360;  // 336 hours
+		self->max_steps = 6720;  // 672 hours (4 weeks)
         self->feedback_maturity = 1.0;
         self->receptor_sensitivity = 1.0;
         self->stress_resilience = 1.0;
