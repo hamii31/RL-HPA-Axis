@@ -203,9 +203,9 @@ int main() {
     printf("HPA Axis Curriculum training\n");
     printf("========================================================================\n");
     printf("\nTraining progression:\n");
-	printf("  Stage 1: Child       -  96 hours/episode  (4 days)\n"); // Early-life stress adaptations have lasting effects, so we keep episodes shorter to focus on learning basic regulation without overwhelming the agent
-	printf("  Stage 2: Adolescent  -  168 hours/episode  (1 week)\n"); // Adolescence is a critical period for HPA axis maturation, so we increase episode length to allow the agent to learn more complex dynamics and longer-term regulation strategies
-	printf("  Stage 3: Adult       -  336 hours/episode (2 weeks)\n"); // Adult stage represents the full complexity of the HPA axis, so we further increase episode length to allow the agent to master long-term regulation and adapt to a wider range of stressors
+	printf("  Stage 1: Child       -  168 hours/episode  (1 week)\n"); // Early-life stress adaptations have lasting effects, so we keep episodes shorter to focus on learning basic regulation without overwhelming the agent
+	printf("  Stage 2: Adolescent  -  336 hours/episode (2 weeks)\n"); // Adolescence is a critical period for HPA axis maturation, so we increase episode length to allow the agent to learn more complex dynamics and longer-term regulation strategies
+	printf("  Stage 3: Adult       -  672 hours/episode (4 weeks)\n"); // Adult stage represents the full complexity of the HPA axis, so we further increase episode length to allow the agent to master long-term regulation and adapt to a wider range of stressors
     printf("\nQ-table transfers between stages (transfer learning)\n");
     printf("========================================================================\n");
     
