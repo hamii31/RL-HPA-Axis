@@ -250,7 +250,7 @@ python hpa.py
 ### HPA Axis Physiology & Regulation
 
 1. **Smith, S.M., & Vale, W.W. (2006).** The role of the hypothalamic-pituitary-adrenal axis in neuroendocrine responses to stress. *Dialogues in Clinical Neuroscience*, 8(4), 383-395.  
-   [PMC1828259](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1828259/)
+   [PMC3181830](https://pubmed.ncbi.nlm.nih.gov/17290797/)
 
 2. **Herman, J.P., McKlveen, J.M., Ghosal, S., Kopp, B., Wulsin, A., Makinson, R., Scheimann, J., & Myers, B. (2016).** Regulation of the hypothalamic-pituitary-adrenocortical stress response. *Comprehensive Physiology*, 6(2), 603-621.  
    [PMC4867107](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4867107/)
